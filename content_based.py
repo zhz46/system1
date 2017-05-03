@@ -1,43 +1,84 @@
+import sys
 import pandas as pd
 import numpy as np
-import random
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# read item profiles
-cb = pd.read_csv("items.csv")
-cb.columns = ['item_id','feature_list']
+
+def main():
+    item_input = sys.argv[1]
+    purchase_input = sys.argv[2]
+
+    # read item profiles
+    cb = pd.read_csv(item_input)
+    cb.columns = ['item_id', 'feature_list']
+
+    # remove obs that has non-digit item_id
+    cb = cb[cb.item_id.map(lambda x: x.isdigit())]
+
+    # use tf-idf to extract features
+    item_df = tfidf_extract(cb)
+    items_unique = item_df['item_id'].unique()
+
+    # read purchase data
+    df = pd.read_csv(purchase_input)
+    df.columns = ['qty', 'item_id', 'guest_id', 'purchase_date']
+    df = df[['guest_id', 'item_id', 'qty']]
+
+    # drop missing value, negative qty and non-digit obs
+    df = df.dropna()
+    df = df[df.qty > 0]
+    df = df[df.guest_id.map(lambda x: x.isdigit()) & df.item_id.map(lambda x: x.isdigit())]
+
+    # drop items that are not in item profiles
+    df['guest_id'] = df['guest_id'].astype(int)
+    df['item_id'] = df['item_id'].astype(int)
+    df = df[df['item_id'].isin(items_unique)].reset_index(drop=True)
+    items = list(np.sort(df.item_id.unique()))
+
+    # inner join item profiles and purchase history
+    all = pd.merge(df, item_df, on='item_id', how='inner')
+
+    # construct user profiles
+    guest_df = all.drop(['qty', 'item_id'], axis=1).groupby('guest_id').mean()
+
+    # construct item profiles
+    item_df = item_df[item_df['item_id'].isin(items)]
+    item_df.index = item_df['item_id']
+    item_df = item_df.drop('item_id', axis=1)
+    item_df = item_df.sort_index()
+
+    cold_start = cold_start_extract(guest_df, item_df,threshold=0.5)
+    cold_start.to_csv("cold_start.csv", index=False)
+
 
 # use tf-idf to extract features
-tf = TfidfVectorizer(analyzer='word', min_df=0)
-tfidf_matrix = tf.fit_transform(cb['feature_list'])
-feature_names = tf.get_feature_names()
-feature_df = pd.DataFrame(tfidf_matrix.toarray(), columns=feature_names)
+def tfidf_extract(data):
+    tf = TfidfVectorizer(analyzer='word', min_df=0)
+    tfidf_matrix = tf.fit_transform(data['feature_list'])
+    feature_names = tf.get_feature_names()
+    item_df = pd.DataFrame(tfidf_matrix.toarray(), columns=feature_names)
+    item_df = item_df.drop('null', axis=1)
+    item_df['item_id'] = data['item_id']
+    item_df = item_df.dropna()
+    item_df['item_id'] = item_df['item_id'].astype(int)
+    return item_df
 
-feature_df['item_id'] = cb['item_id']
-feature_df.drop('null',axis=1, inplace=True)
-items_unique = feature_df['item_id'].unique()
 
-# read purchase data
-df = pd.read_csv("purchases.csv")
-df.columns = ['qty', 'item_id', 'guest_id', 'purchase_date']
-df = df.dropna().reset_index(drop=True)
-df = df[df.qty > 0]
-df = df[['guest_id', 'item_id', 'qty']]
-df = df[df.guest_id.map(lambda x: x.isdigit()) & df.item_id.map(lambda x: x.isdigit())]
+def cold_start_extract(guest_df, item_df, threshold=0.5):
+    # calculate similarity matrix for all guest, item pairs
+    cross_similarity = cosine_similarity(guest_df, item_df)
+    row_ind, col_ind = np.where(cross_similarity > threshold)
+    guest_start = guest_df.index[row_ind]
+    item_start = item_df.index[col_ind]
+    cold_start = pd.DataFrame({'guest_id': guest_start, 'item_id': item_start, 'qty': 1})
+    return cold_start
 
-# drop items that are not in item profiles
-df_short = df[df['item_id'].isin(items_unique)]
 
-# join feature profiles and purchase history
-all = pd.merge(df_short, feature_df, on='item_id', how='inner')
+if __name__ == "__main__":
+    main()
 
-# construct user profiles
-user_df = all.drop(['qty', 'item_id'], axis=1).groupby('guest_id').mean()
 
-# construct item profiles
-feature_df.index = feature_df['item_id']
-item_df = feature_df.drop('item_id', axis=1)
 
-# calculate similarity matrix for all user, item pairs
-cross_similarity = cosine_similarity(user_df, item_df)
+
+
