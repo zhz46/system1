@@ -48,7 +48,8 @@ def main():
     item_df = item_df.drop('item_id', axis=1)
     item_df = item_df.sort_index()
 
-    cold_start = cold_start_extract(guest_df, item_df,threshold=0.5)
+    # calculate guest, item similarity matrix, using 0.6 as threshold for initialization
+    cold_start = cold_start_extract(guest_df, item_df,threshold=0.6)
     cold_start.to_csv("cold_start.csv", index=False)
 
 
@@ -65,7 +66,7 @@ def tfidf_extract(data):
     return item_df
 
 
-def cold_start_extract(guest_df, item_df, threshold=0.5):
+def cold_start_extract(guest_df, item_df, threshold=0.7):
     # calculate similarity matrix for all guest, item pairs
     cross_similarity = cosine_similarity(guest_df, item_df)
     row_ind, col_ind = np.where(cross_similarity > threshold)
