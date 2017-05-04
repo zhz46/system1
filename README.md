@@ -17,7 +17,7 @@ python content_based.py items.csv purchases.csv
 python collaborative.py purchases.csv cold_start.csv k
 ```
 Here k is the number of product you want to recommend to guests. It has been set to less than or equal to 10. cold_start.csv 
-is an intermediate output from the first command.
+is an intermediate output from the first command. **The prediction results are saved in recommendations.csv**.
 
 ## Problem Statement
 In general, it is more difficult to implement a Recommender System than other common machine learning models. The main reason is that most of other machine learning models have a pretty unified framework: Data preprocessing/feature engineering, training and testing. For recommender system, the problems and solutions are more flexible. Many researchers have different evaluation methods to support their models. And the only golden criteria probably is to check whether your recommender systems bring more business to you or not.
