@@ -1,4 +1,4 @@
-# Target Challenge - A Hybrid Recommender System 
+# A Hybrid Recommender System 
 
 
 ## Background
