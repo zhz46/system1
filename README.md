@@ -1,8 +1,7 @@
 # A Hybrid Recommender System 
 
 
-## Background
-Target wants to provide quality recommendations to guests for products they may be interested in. The task of this data science challenge is to build a model to provide product recommendations given guest id. 
+We want to provide quality recommendations to guests for products they may be interested in. The task of this data science challenge is to build a model to provide product recommendations given guest id. 
 - purchases.csv which contains guest item purchases (purchase date, guest id, item id, quantity purchased), and
 - items.csv which contains catalog data that gives a list of anonymized discrete attributes for each item (item id, list of discrete attributes).
 
